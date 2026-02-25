@@ -1,0 +1,33 @@
+# Node.js
+node_modules/
+.next/
+out/
+build/
+npm-debug.log
+yarn-error.log
+
+# Python
+venv/
+env/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Databases
+*.db
+*.sqlite3
+backend/data/
+devops_forge.db
+
+# OS Files
+.DS_Store
+Thumbs.db
