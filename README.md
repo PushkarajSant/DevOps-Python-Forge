@@ -11,7 +11,7 @@ A production-grade, exercise-driven Python learning platform for DevOps engineer
 ![DevOps Python Forge Authentication](docs/login.png)
 *Dedicated JWT authentication and registration page.*
 
-![AI Code Mentor](docs/ai_mentor_screenshot.png)
+![AI Code Mentor](docs/qwen_ai_mentor_ui.png)
 *Self-hosted Qwen 2.5 Coder AI Assistant integrated directly into the Monaco Editor.*
 
 - 🎯 **193 Exercises** across 11 progressive levels
