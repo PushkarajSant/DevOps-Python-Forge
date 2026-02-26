@@ -12,6 +12,7 @@ class User(Base):
     hashed_password = Column(String(200), nullable=False)
     full_name = Column(String(100), nullable=True)
     role = Column(String(20), default="user")  # user | admin
+    is_active = Column(Boolean, default=True)
     total_xp = Column(Integer, default=0)
     current_level = Column(Integer, default=0)
     streak_days = Column(Integer, default=0)

@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: Optional[str]
     role: str
+    is_active: bool
     total_xp: int
     current_level: int
     streak_days: int
@@ -109,6 +110,7 @@ class ExerciseDetail(BaseModel):
     visible_test_cases: List[VisibleTestCase]
     unlocked_hints: List[HintResponse]
     concepts: List[ConceptResponse]
+    next_exercise_id: Optional[int] = None
 
     class Config:
         from_attributes = True

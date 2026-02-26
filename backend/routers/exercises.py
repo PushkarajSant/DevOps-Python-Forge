@@ -49,6 +49,19 @@ def get_exercise(
         TestCase.is_hidden == False,
     ).all()
 
+    # Calculate next_exercise_id
+    next_ex = db.query(Exercise).filter(
+        Exercise.level_id == ex.level_id,
+        Exercise.order_in_level > ex.order_in_level
+    ).order_by(Exercise.order_in_level.asc()).first()
+    
+    if not next_ex:
+        next_level = db.query(Level).filter(Level.level_number > level.level_number).order_by(Level.level_number.asc()).first()
+        if next_level:
+            next_ex = db.query(Exercise).filter(Exercise.level_id == next_level.id).order_by(Exercise.order_in_level.asc()).first()
+            
+    next_exercise_id = next_ex.id if next_ex else None
+
     return {
         "id": ex.id,
         "title": ex.title,
@@ -71,4 +84,5 @@ def get_exercise(
         ],
         "unlocked_hints": hints,
         "concepts": concepts,
+        "next_exercise_id": next_exercise_id,
     }

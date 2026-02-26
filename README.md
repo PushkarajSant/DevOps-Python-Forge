@@ -61,6 +61,10 @@ Then open **http://localhost:3000** in your browser.
 docker-compose up --build
 ```
 
+## Production Deployment
+
+If you are looking to deploy DevOps Python Forge securely to a public domain via AWS or GCP, please refer to the detailed [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md).
+
 ## Project Structure
 
 ```

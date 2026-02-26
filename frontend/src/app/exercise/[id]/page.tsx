@@ -246,7 +246,21 @@ export default function ExercisePage() {
                             {submitting ? <span className="w-3 h-3 border border-black border-t-transparent rounded-full animate-spin" /> : '✓'}
                             Submit
                         </button>
-                        <span className="text-xs text-gray-600 ml-auto">Ctrl+Shift+Enter = Submit</span>
+                        <div className="ml-auto flex items-center gap-4">
+                            <span className="text-xs text-gray-600">Ctrl+Shift+Enter = Submit</span>
+                            {result?.passed && exercise?.next_exercise_id && (
+                                <Link href={`/exercise/${exercise.next_exercise_id}`}
+                                    className="px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold text-sm rounded-lg transition flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                    Next Exercise ➔
+                                </Link>
+                            )}
+                            {result?.passed && !exercise?.next_exercise_id && (
+                                <Link href="/dashboard"
+                                    className="px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold text-sm rounded-lg transition flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                                    Back to Dashboard ➔
+                                </Link>
+                            )}
+                        </div>
                     </div>
 
                     {/* Output Panel */}

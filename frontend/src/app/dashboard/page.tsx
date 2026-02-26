@@ -35,7 +35,7 @@ export default function DashboardPage() {
             {/* Nav */}
             <nav className="border-b border-[#1f2937] bg-[#111827]/80 backdrop-blur sticky top-0 z-50">
                 <div className="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between">
-                    <span className="text-[#00FF88] font-bold text-lg">⚙️ DevOps Python Forge</span>
+                    <span className="text-[#00FF88] font-bold text-lg">DevOps Python Forge</span>
                     <div className="flex items-center gap-5">
                         <Link href="/progress" className="text-xs text-gray-400 hover:text-[#00FF88] transition">📊 Progress</Link>
                         <Link href="/leaderboard" className="text-xs text-gray-400 hover:text-[#00FF88] transition">🏆 Leaderboard</Link>

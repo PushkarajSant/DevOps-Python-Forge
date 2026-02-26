@@ -41,11 +41,11 @@ export default function LoginPage() {
             <div className="w-full max-w-md relative z-10">
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 mb-3">
-                        <span className="text-3xl">⚙️</span>
-                        <h1 className="text-2xl font-bold text-[#00FF88] glow-green-text">DevOps Python Forge</h1>
-                    </div>
-                    <p className="text-gray-400 text-sm">Transform your DevOps skills with Python automation</p>
+                    <div className="flex items-center gap-3 mb-6">
+                        <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#00FF88] to-[#3b82f6]">
+                            DevOps Python Forge
+                        </h1>
+                    </div><p className="text-gray-400 text-sm">Transform your DevOps skills with Python automation</p>
                 </div>
 
                 <div className="bg-[#111827] border border-[#1f2937] rounded-2xl p-8 shadow-2xl">

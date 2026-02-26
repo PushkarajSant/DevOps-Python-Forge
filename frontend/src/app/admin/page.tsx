@@ -14,6 +14,8 @@ export default function AdminPage() {
     const [users, setUsers] = useState<any[]>([])
     const [activeTab, setActiveTab] = useState<'overview' | 'exercises' | 'users'>('overview')
     const [fetching, setFetching] = useState(true)
+    const [newUser, setNewUser] = useState({ username: '', email: '', password: '', role: 'user' })
+    const [isAddingUser, setIsAddingUser] = useState(false)
 
     useEffect(() => {
         if (!loading && !user) router.push('/')
@@ -53,6 +55,48 @@ export default function AdminPage() {
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u))
             toast.success('Role updated')
         } catch { toast.error('Update failed') }
+    }
+
+    const handleToggleStatus = async (userId: number, currentStatus: boolean) => {
+        const newStatus = !currentStatus;
+        try {
+            await api.put(`/api/admin/users/${userId}/status?is_active=${newStatus}`);
+            setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_active: newStatus } : u));
+            toast.success(newStatus ? 'User activated' : 'User deactivated');
+        } catch { toast.error('Failed to update status'); }
+    }
+
+    const handleDeleteUser = async (userId: number) => {
+        if (!confirm('WARNING: This will permanently delete the user and all their progress. Continue?')) return;
+        try {
+            await api.delete(`/api/admin/users/${userId}`);
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            toast.success('User deleted');
+        } catch (e: any) {
+            toast.error(e.response?.data?.detail || 'Failed to delete user');
+        }
+    }
+
+    const handleResetPassword = async (userId: number) => {
+        const newPass = prompt("Enter new password for this user (min 6 characters):");
+        if (!newPass) return;
+        if (newPass.length < 6) return toast.error("Password too short");
+
+        try {
+            await api.put(`/api/admin/users/${userId}/password`, { password: newPass });
+            toast.success("Password updated successfully");
+        } catch { toast.error('Failed to reset password'); }
+    }
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault()
+        try {
+            const r = await api.post('/api/admin/users', newUser)
+            toast.success('User created')
+            setUsers([{ ...newUser, id: r.data.id, is_active: true, total_xp: 0, current_level: 0, total_submissions: 0 }, ...users])
+            setIsAddingUser(false)
+            setNewUser({ username: '', email: '', password: '', role: 'user' })
+        } catch (e: any) { toast.error(e.response?.data?.detail || 'Failed to create user') }
     }
 
     if (loading || fetching) return (
@@ -150,17 +194,55 @@ export default function AdminPage() {
                 {/* Users Table */}
                 {activeTab === 'users' && (
                     <div className="animate-fadein">
-                        <h2 className="text-xl font-bold mb-4">Users ({users.length})</h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold">Users ({users.length})</h2>
+                            <button onClick={() => setIsAddingUser(!isAddingUser)}
+                                className="px-4 py-2 bg-[#3b82f6] text-white text-sm rounded-lg hover:bg-[#2563eb] transition">
+                                {isAddingUser ? 'Cancel' : '+ Add User'}
+                            </button>
+                        </div>
+
+                        {isAddingUser && (
+                            <form onSubmit={handleCreateUser} className="bg-[#1f2937] border border-gray-600 rounded-xl p-4 mb-6 flex gap-4 items-end">
+                                <label className="flex flex-col text-xs text-gray-400 gap-1 flex-1">
+                                    Username
+                                    <input required placeholder="Username" className="bg-[#111827] px-3 py-2 rounded border border-gray-600 focus:border-[#00FF88] text-white outline-none"
+                                        value={newUser.username} onChange={e => setNewUser({ ...newUser, username: e.target.value })} />
+                                </label>
+                                <label className="flex flex-col text-xs text-gray-400 gap-1 flex-1">
+                                    Email
+                                    <input required type="email" placeholder="Email" className="bg-[#111827] px-3 py-2 rounded border border-gray-600 focus:border-[#00FF88] text-white outline-none"
+                                        value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+                                </label>
+                                <label className="flex flex-col text-xs text-gray-400 gap-1 flex-1">
+                                    Password
+                                    <input required type="password" placeholder="Password" minLength={6} className="bg-[#111827] px-3 py-2 rounded border border-gray-600 focus:border-[#00FF88] text-white outline-none"
+                                        value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+                                </label>
+                                <label className="flex flex-col text-xs text-gray-400 gap-1 w-32">
+                                    Role
+                                    <select className="bg-[#111827] px-3 py-2 rounded border border-gray-600 focus:border-[#00FF88] text-white outline-none"
+                                        value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </label>
+                                <button type="submit" className="px-4 py-2 bg-[#00FF88] text-black font-semibold text-sm rounded hover:bg-[#00cc6a] transition h-[38px]">
+                                    Save User
+                                </button>
+                            </form>
+                        )}
+
                         <div className="bg-[#111827] border border-[#1f2937] rounded-xl overflow-hidden">
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b border-[#1f2937] text-gray-500 text-xs uppercase">
                                         <th className="text-left p-3">Username</th>
                                         <th className="text-left p-3">Email</th>
+                                        <th className="text-left p-3">Status</th>
                                         <th className="text-left p-3">Role</th>
                                         <th className="text-left p-3">XP</th>
                                         <th className="text-left p-3">Level</th>
-                                        <th className="text-left p-3">Submissions</th>
                                         <th className="text-right p-3">Actions</th>
                                     </tr>
                                 </thead>
@@ -170,21 +252,38 @@ export default function AdminPage() {
                                             <td className="p-3 font-semibold">{u.username}</td>
                                             <td className="p-3 text-gray-400">{u.email}</td>
                                             <td className="p-3">
-                                                <span className={u.role === 'admin' ? 'text-red-400 text-xs font-bold' : 'text-gray-500 text-xs'}>
+                                                <span className={u.is_active ? 'text-[#00FF88] text-xs' : 'text-red-400 text-xs font-bold'}>
+                                                    {u.is_active ? 'Active' : 'Deactivated'}
+                                                </span>
+                                            </td>
+                                            <td className="p-3">
+                                                <span className={u.role === 'admin' ? 'text-blue-400 text-xs font-bold' : 'text-gray-500 text-xs'}>
                                                     {u.role}
                                                 </span>
                                             </td>
                                             <td className="p-3 text-[#00FF88]">{u.total_xp}</td>
                                             <td className="p-3">{u.current_level}</td>
-                                            <td className="p-3">{u.total_submissions}</td>
                                             <td className="p-3 text-right">
-                                                {u.role === 'user' ? (
-                                                    <button onClick={() => handleRoleUpdate(u.id, 'admin')}
-                                                        className="text-xs text-blue-400 hover:text-blue-300 transition">Make Admin</button>
-                                                ) : (
-                                                    <button onClick={() => handleRoleUpdate(u.id, 'user')}
-                                                        className="text-xs text-gray-400 hover:text-gray-300 transition">Demote</button>
-                                                )}
+                                                <div className="flex items-center justify-end gap-3 flex-wrap">
+                                                    {u.role === 'user' ? (
+                                                        <button onClick={() => handleRoleUpdate(u.id, 'admin')}
+                                                            className="text-xs text-blue-400 hover:text-blue-300 transition">Make Admin</button>
+                                                    ) : (
+                                                        <button onClick={() => handleRoleUpdate(u.id, 'user')}
+                                                            className="text-xs text-gray-400 hover:text-gray-300 transition">Demote</button>
+                                                    )}
+                                                    <span className="text-gray-700">|</span>
+                                                    <button onClick={() => handleResetPassword(u.id)}
+                                                        className="text-xs text-amber-400 hover:text-amber-300 transition">Reset Pwd</button>
+                                                    <span className="text-gray-700">|</span>
+                                                    <button onClick={() => handleToggleStatus(u.id, u.is_active)}
+                                                        className={`text-xs ${u.is_active ? 'text-orange-400 hover:text-orange-300' : 'text-[#00FF88] hover:text-green-300'} transition`}>
+                                                        {u.is_active ? 'Deactivate' : 'Activate'}
+                                                    </button>
+                                                    <span className="text-gray-700">|</span>
+                                                    <button onClick={() => handleDeleteUser(u.id)}
+                                                        className="text-xs text-red-500 hover:text-red-400 transition">Delete</button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

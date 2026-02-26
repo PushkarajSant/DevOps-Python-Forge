@@ -202,6 +202,7 @@ def list_users(admin: User = Depends(require_admin), db: Session = Depends(get_d
             "username": u.username,
             "email": u.email,
             "role": u.role,
+            "is_active": getattr(u, "is_active", True),
             "total_xp": u.total_xp,
             "current_level": u.current_level,
             "total_submissions": u.total_submissions,
@@ -227,3 +228,97 @@ def update_user_role(
     user.role = role
     db.commit()
     return {"id": user.id, "username": user.username, "role": user.role}
+
+
+@router.post("/users")
+def create_user(
+    data: dict,  # Using dict directly to avoid circular imports or redefining auth schemas
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Admin-created user."""
+    from security import get_password_hash
+    if db.query(User).filter(User.email == data.get("email")).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if db.query(User).filter(User.username == data.get("username")).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+        
+    user = User(
+        email=data.get("email"),
+        username=data.get("username"),
+        hashed_password=get_password_hash(data.get("password")),
+        full_name=data.get("full_name"),
+        role=data.get("role", "user"),
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"id": user.id, "username": user.username, "created": True}
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Permanently delete a user and all their data."""
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Delete related data first
+    db.query(Submission).filter(Submission.user_id == user_id).delete()
+    db.query(UserProgress).filter(UserProgress.user_id == user_id).delete()
+    from models import Achievement
+    db.query(Achievement).filter(Achievement.user_id == user_id).delete()
+    
+    db.delete(user)
+    db.commit()
+    return {"deleted": True}
+
+
+@router.put("/users/{user_id}/status")
+def update_user_status(
+    user_id: int,
+    is_active: bool,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Activate or deactivate a user."""
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot deactivate your own account")
+        
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.is_active = is_active
+    db.commit()
+    return {"id": user.id, "username": user.username, "is_active": user.is_active}
+
+
+@router.put("/users/{user_id}/password")
+def reset_user_password(
+    user_id: int,
+    data: dict,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Force reset a user's password."""
+    from security import get_password_hash
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    new_password = data.get("password")
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    return {"success": True, "message": "Password updated"}

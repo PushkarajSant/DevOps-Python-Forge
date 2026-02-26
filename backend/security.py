@@ -53,6 +53,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(models.User).filter(models.User.username == username).first()
     if user is None:
         raise credentials_exception
+    if not getattr(user, "is_active", True):  # Fallback to True if column missing
+        raise HTTPException(status_code=403, detail="Your account has been deactivated. Please contact an administrator.")
     return user
 
 
