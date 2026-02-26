@@ -5,7 +5,7 @@ import time
 import uuid
 
 from database import engine, Base
-from routers import auth, users, levels, exercises, submissions, progress, achievements, admin
+from routers import auth, users, levels, exercises, submissions, progress, achievements, admin, ai
 
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
@@ -51,3 +51,4 @@ app.include_router(submissions.router, prefix="/api/submissions", tags=["submiss
 app.include_router(progress.router, prefix="/api/progress", tags=["progress"])
 app.include_router(achievements.router, prefix="/api/achievements", tags=["achievements"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
+app.include_router(ai.router)

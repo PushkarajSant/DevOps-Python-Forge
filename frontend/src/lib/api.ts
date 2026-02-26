@@ -49,6 +49,7 @@ export const submissionsApi = {
 // Progress
 export const progressApi = {
     dashboard: () => api.get('/api/progress/dashboard'),
+    global: () => api.get('/api/progress'),
 }
 
 // Users
@@ -60,6 +61,12 @@ export const usersApi = {
 export const achievementsApi = {
     getAll: () => api.get('/api/achievements'),
     getAvailable: () => api.get('/api/achievements/available'),
+}
+
+// AI
+export const aiApi = {
+    review: (exercise_id: number, code: string) => api.post('/api/ai/review', { exercise_id, code }),
+    hint: (exercise_id: number, code: string, error_message?: string) => api.post('/api/ai/hint', { exercise_id, code, error_message }),
 }
 
 export default api

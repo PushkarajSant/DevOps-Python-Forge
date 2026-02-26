@@ -23,7 +23,7 @@ services:
         uvicorn main:app --host 0.0.0.0 --port 8000 --reload
       "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -49,8 +49,37 @@ services:
     networks:
       - forge-net
 
+  # ─── AI Code Assistant (Ollama) ───────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: forge-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - forge-net
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    container_name: forge-ollama-pull
+    depends_on:
+      - ollama
+    networks:
+      - forge-net
+    command: >
+      sh -c "
+        echo 'Waiting for Ollama API to start...' &&
+        while ! curl -s http://ollama:11434/api/tags > /dev/null; do sleep 2; done;
+        echo 'Ollama is up! Pulling qwen2.5-coder:7b...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"qwen2.5-coder:7b\"}' &&
+        echo 'Model pulled successfully!'
+      "
+
 volumes:
   forge-data:
+  ollama-data:
+
 
 networks:
   forge-net:

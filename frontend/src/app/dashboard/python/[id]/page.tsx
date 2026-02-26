@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useAuth } from '@/context/AuthContext'
-import { exercisesApi, submissionsApi } from '@/lib/api'
+import { exercisesApi, submissionsApi, aiApi } from '@/lib/api'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -21,8 +21,12 @@ export default function ExercisePage() {
     const [ran, setRan] = useState(false)
     const [running, setRunning] = useState(false)
     const [submitting, setSubmitting] = useState(false)
-    const [activeTab, setActiveTab] = useState<'problem' | 'hints' | 'concepts'>('problem')
+    const [activeTab, setActiveTab] = useState<'problem' | 'hints' | 'concepts' | 'ai'>('problem')
     const [customInput, setCustomInput] = useState('')
+
+    // AI State
+    const [aiLoading, setAiLoading] = useState(false)
+    const [aiFeedback, setAiFeedback] = useState<string | null>(null)
 
     useEffect(() => { if (!loading && !user) router.push('/') }, [user, loading])
 
@@ -74,6 +78,35 @@ export default function ExercisePage() {
         return () => window.removeEventListener('keydown', handler)
     }, [handleRun, handleSubmit])
 
+    const handleAskAIMentor = async () => {
+        if (!exercise) return
+        setAiLoading(true)
+        setAiFeedback(null)
+        try {
+            const errorMsg = result && !result.passed ? result.failure_message : output?.error
+            const res = await aiApi.hint(exercise.id, code, errorMsg)
+            setAiFeedback(res.data.hint)
+        } catch {
+            toast.error("AI Mentor is currently unavailable.")
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
+    const handleRequestSeniorReview = async () => {
+        if (!exercise) return
+        setAiLoading(true)
+        setAiFeedback(null)
+        try {
+            const res = await aiApi.review(exercise.id, code)
+            setAiFeedback(res.data.review)
+        } catch {
+            toast.error("Senior AI Reviewer is currently unavailable.")
+        } finally {
+            setAiLoading(false)
+        }
+    }
+
     if (loading || !exercise) return (
         <div className="min-h-screen flex items-center justify-center">
             <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin" />
@@ -85,7 +118,7 @@ export default function ExercisePage() {
             {/* Nav */}
             <nav className="border-b border-[#1f2937] bg-[#111827] flex items-center justify-between px-4 py-2 shrink-0">
                 <div className="flex items-center gap-3">
-                    <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm">← Back</Link>
+                    <Link href="/dashboard/python" className="text-gray-400 hover:text-white text-sm">← Back</Link>
                     <span className="text-gray-600">|</span>
                     <span className="font-medium text-sm truncate max-w-[200px]">{exercise.title}</span>
                     <span className={exercise.difficulty === 'easy' ? 'badge-easy' : exercise.difficulty === 'medium' ? 'badge-medium' : 'badge-hard'}>
@@ -105,10 +138,10 @@ export default function ExercisePage() {
                 <div className="w-[42%] flex flex-col border-r border-[#1f2937] overflow-hidden">
                     {/* Tabs */}
                     <div className="flex border-b border-[#1f2937] shrink-0">
-                        {(['problem', 'hints', 'concepts'] as const).map(t => (
+                        {(['problem', 'hints', 'concepts', 'ai'] as const).map(t => (
                             <button key={t} onClick={() => setActiveTab(t)}
-                                className={`px-4 py-2.5 text-xs font-medium capitalize transition ${activeTab === t ? 'text-[#00FF88] border-b-2 border-[#00FF88]' : 'text-gray-400 hover:text-white'}`}>
-                                {t} {t === 'hints' && exercise.unlocked_hints?.length > 0 && `(${exercise.unlocked_hints.length})`}
+                                className={`px-4 py-2.5 text-xs font-medium capitalize transition ${activeTab === t ? 'text-[#00FF88] border-b-2 border-[#00FF88]' : 'text-gray-400 hover:text-white'} ${t === 'ai' ? 'ml-auto flex items-center gap-1 text-[#3b82f6]' : ''}`}>
+                                {t === 'ai' && '✨'} {t} {t === 'hints' && exercise.unlocked_hints?.length > 0 && `(${exercise.unlocked_hints.length})`}
                             </button>
                         ))}
                     </div>
@@ -191,6 +224,42 @@ export default function ExercisePage() {
                                 )}
                             </div>
                         )}
+
+                        {activeTab === 'ai' && (
+                            <div className="space-y-4 animate-fadein">
+                                <div className="bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-lg p-4">
+                                    <h3 className="font-semibold text-[#3b82f6] text-sm mb-2 flex items-center gap-2">
+                                        ✨ Ollama LLM Assistant
+                                    </h3>
+                                    <p className="text-gray-400 text-xs mb-4">
+                                        Powered by a local, completely private <span className="text-gray-300 font-mono">qwen2.5-coder</span> model. Your code never leaves the sandbox.
+                                    </p>
+
+                                    <div className="flex gap-3">
+                                        {(result?.passed || exercise.is_completed) ? (
+                                            <button onClick={handleRequestSeniorReview} disabled={aiLoading}
+                                                className="px-4 py-2 bg-[#3b82f6] text-white hover:bg-[#2563eb] text-xs font-semibold rounded transition disabled:opacity-50 flex items-center gap-2">
+                                                {aiLoading ? <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : '👨‍💻'} Request Senior Review
+                                            </button>
+                                        ) : (
+                                            <button onClick={handleAskAIMentor} disabled={aiLoading}
+                                                className="px-4 py-2 bg-[#1f2937] text-white hover:bg-[#374151] border border-[#374151] text-xs font-semibold rounded transition disabled:opacity-50 flex items-center gap-2">
+                                                {aiLoading ? <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : '💡'} I'm stuck: Ask AI Mentor
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {aiFeedback && (
+                                    <div className="mt-6 border-t border-[#1f2937] pt-4">
+                                        <div className="text-xs text-gray-500 mb-2 uppercase tracking-wide font-semibold">AI Response:</div>
+                                        <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap font-sans bg-[#111827] p-4 rounded border border-[#1f2937]">
+                                            {aiFeedback}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -249,15 +318,15 @@ export default function ExercisePage() {
                         <div className="ml-auto flex items-center gap-4">
                             <span className="text-xs text-gray-600">Ctrl+Shift+Enter = Submit</span>
                             {result?.passed && exercise?.next_exercise_id && (
-                                <Link href={`/exercise/${exercise.next_exercise_id}`}
+                                <Link href={`/dashboard/python/${exercise.next_exercise_id}`}
                                     className="px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold text-sm rounded-lg transition flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
                                     Next Exercise ➔
                                 </Link>
                             )}
                             {result?.passed && !exercise?.next_exercise_id && (
-                                <Link href="/dashboard"
+                                <Link href="/dashboard/python"
                                     className="px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold text-sm rounded-lg transition flex items-center gap-2 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                                    Back to Dashboard ➔
+                                    Back to Track ➔
                                 </Link>
                             )}
                         </div>

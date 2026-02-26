@@ -4,6 +4,13 @@ A production-grade, exercise-driven Python learning platform for DevOps engineer
 
 ## Features
 
+### Platform UI
+![DevOps Python Forge Landing Page](docs/landing.png)
+*The brand new marketing landing page featuring dynamic track routing.*
+
+![DevOps Python Forge Authentication](docs/login.png)
+*Dedicated JWT authentication and registration page.*
+
 - 🎯 **193 Exercises** across 11 progressive levels
 - 🖥️ **Monaco Editor IDE** — VS Code-like coding experience in the browser
 - 🔒 **Sandboxed Execution** — AST-validated, timeout-protected Python runner
@@ -20,7 +27,7 @@ A production-grade, exercise-driven Python learning platform for DevOps engineer
 |-------|------|
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, Monaco Editor |
 | Backend | FastAPI, Python 3.11+ |
-| Database | SQLite (Dev) / PostgreSQL (Prod) + SQLAlchemy ORM |
+| Database | SQLite + SQLAlchemy ORM |
 | Auth | JWT (python-jose + passlib/bcrypt) |
 | Execution | subprocess + AST validation sandbox |
 
@@ -40,11 +47,7 @@ python -m venv venv
 .\venv\Scripts\activate        # Windows
 # source venv/bin/activate     # Mac/Linux
 
-# The application uses SQLite by default. 
-# To use PostgreSQL (required for production), set the connection string:
-# Windows (PowerShell): $env:DATABASE_URL="postgresql://<user>:<password>@localhost:5432/devops_forge"
-# Linux/Mac: export DATABASE_URL="postgresql://<user>:<password>@localhost:5432/devops_forge"
-# Note: Ensure the database 'devops_forge' is already created in your Postgres server.
+# The application uses SQLite by default, which is already set up and ready to go.
 
 pip install -r requirements.txt
 

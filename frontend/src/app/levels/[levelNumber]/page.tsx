@@ -46,10 +46,10 @@ export default function LevelPage() {
                     <span className="text-sm text-gray-400">{completed}/{exercises.length} completed</span>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {exercises.map((ex, i) => (
-                        <Link key={ex.id} href={`/exercise/${ex.id}`}
-                            className={`flex items-center gap-4 p-4 rounded-xl border transition-all group ${ex.is_completed ? 'border-[#00FF88]/30 bg-[#00FF88]/5' : 'border-[#1f2937] bg-[#111827] hover:border-[#00FF88]/30'}`}>
+                        <Link key={ex.id} href={`/dashboard/python/${ex.id}`}
+                            className={`block bg-[#1f2937] p-4 rounded-lg border border-[#374151] hover:border-[#00FF88] transition cursor-pointer group ${ex.is_completed ? 'border-[#00FF88]/30 bg-[#00FF88]/5' : 'border-[#1f2937] bg-[#111827] hover:border-[#00FF88]/30'}`}>
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-mono font-bold ${ex.is_completed ? 'bg-[#00FF88] text-black' : 'bg-[#1f2937] text-gray-400'}`}>
                                 {ex.is_completed ? '✓' : i + 1}
                             </div>

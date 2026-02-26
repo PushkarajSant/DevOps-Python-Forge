@@ -9,6 +9,23 @@ from security import get_current_user
 router = APIRouter()
 
 
+@router.get("")
+def get_global_progress(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns global progress for the tracks."""
+    total_exercises = db.query(Exercise).count()
+    completed_exercises = db.query(UserProgress).filter(
+        UserProgress.user_id == current_user.id,
+        UserProgress.completed == True
+    ).count()
+    
+    return {
+        "total_exercises": total_exercises,
+        "completed": completed_exercises
+    }
+
 @router.get("/dashboard")
 def get_dashboard(
     db: Session = Depends(get_db),
