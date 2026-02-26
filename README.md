@@ -15,6 +15,7 @@ A production-grade, exercise-driven Python learning platform for DevOps engineer
 *Self-hosted Qwen 2.5 Coder AI Assistant integrated directly into the Monaco Editor.*
 
 - 🎯 **193 Exercises** across 11 progressive levels
+- 🤖 **Local AI Mentor** — Get help when you're stuck or request senior code reviews via local Ollama integration (Qwen 2.5 Coder 1.5b)
 - 🖥️ **Monaco Editor IDE** — VS Code-like coding experience in the browser
 - 🔒 **Sandboxed Execution** — AST-validated, timeout-protected Python runner
 - 🏆 **Gamification** — XP, streaks, levels, leaderboard, and 16 achievement badges
