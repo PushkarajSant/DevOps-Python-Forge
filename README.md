@@ -20,7 +20,7 @@ A production-grade, exercise-driven Python learning platform for DevOps engineer
 |-------|------|
 | Frontend | Next.js 14, TypeScript, Tailwind CSS, Monaco Editor |
 | Backend | FastAPI, Python 3.11+ |
-| Database | SQLite + SQLAlchemy ORM |
+| Database | SQLite (Dev) / PostgreSQL (Prod) + SQLAlchemy ORM |
 | Auth | JWT (python-jose + passlib/bcrypt) |
 | Execution | subprocess + AST validation sandbox |
 
@@ -40,8 +40,17 @@ python -m venv venv
 .\venv\Scripts\activate        # Windows
 # source venv/bin/activate     # Mac/Linux
 
+# The application uses SQLite by default. 
+# To use PostgreSQL (required for production), set the connection string:
+# Windows (PowerShell): $env:DATABASE_URL="postgresql://<user>:<password>@localhost:5432/devops_forge"
+# Linux/Mac: export DATABASE_URL="postgresql://<user>:<password>@localhost:5432/devops_forge"
+# Note: Ensure the database 'devops_forge' is already created in your Postgres server.
+
 pip install -r requirements.txt
+
+# This script creates all required database tables/schemas and seeds the initial exercises
 python seed/seed_db.py
+
 uvicorn main:app --reload --port 8000
 ```
 
