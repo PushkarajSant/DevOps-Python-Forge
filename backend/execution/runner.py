@@ -6,6 +6,8 @@ import time
 import tempfile
 import subprocess
 from typing import List, Tuple, Optional
+import asyncio
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Modules that are ALWAYS forbidden (security)
 ALWAYS_FORBIDDEN = {
@@ -228,3 +230,91 @@ def validate_output(actual: str, expected: str, mode: str) -> Tuple[bool, str]:
     # Fallback to exact
     passed = actual == expected
     return passed, f"Expected: {expected}\nGot: {actual}" if not passed else ""
+
+async def run_code_interactive_async(
+    code: str,
+    allowed_imports: List[str],
+    websocket: WebSocket,
+    timeout_secs: int = 60,
+):
+    """Run code and stream IO interactively over a WebSocket."""
+    is_safe, ast_error = check_ast_security(code, allowed_imports)
+    if not is_safe:
+        await websocket.send_json({"type": "stderr", "data": f"Security Error: {ast_error}\n"})
+        await websocket.send_json({"type": "exit", "code": 1})
+        return
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
+        f.write(code)
+        tmp_path = f.name
+
+    try:
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, tmp_path,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={
+                "PATH": os.environ.get("PATH", ""),
+                "PYTHONPATH": "",
+                "PYTHONUNBUFFERED": "1" # Important for real-time output
+            }
+        )
+
+        async def read_stream(stream, ws: WebSocket, is_error: bool):
+            try:
+                while True:
+                    # Read byte by byte or block by block. 1 byte ensures zero latency.
+                    # 1024 bytes with await stream.read is also relatively low latency.
+                    chunk = await stream.read(1024)
+                    if not chunk:
+                        break
+                    text = chunk.decode("utf-8", errors="replace")
+                    msg_type = "stderr" if is_error else "stdout"
+                    await ws.send_json({"type": msg_type, "data": text})
+            except Exception:
+                pass
+
+        async def write_stream(stream, ws: WebSocket):
+            try:
+                while True:
+                    data = await ws.receive_text()
+                    if data:
+                        stream.write(data.encode('utf-8'))
+                        await stream.drain()
+            except WebSocketDisconnect:
+                pass
+            except Exception:
+                pass
+
+        async def timeout_task():
+            await asyncio.sleep(timeout_secs)
+            try:
+                process.kill()
+                await websocket.send_json({"type": "stderr", "data": f"\n\n[Process killed after {timeout_secs}s timeout]"})
+            except ProcessLookupError:
+                pass
+
+        task_stdout = asyncio.create_task(read_stream(process.stdout, websocket, False))
+        task_stderr = asyncio.create_task(read_stream(process.stderr, websocket, True))
+        task_stdin = asyncio.create_task(write_stream(process.stdin, websocket))
+        timeout_coro = asyncio.create_task(timeout_task())
+
+        await process.wait()
+
+        # Clean up tasks
+        timeout_coro.cancel()
+        task_stdout.cancel()
+        task_stderr.cancel()
+        task_stdin.cancel()
+        
+        await websocket.send_json({"type": "exit", "code": process.returncode})
+
+    except Exception as e:
+        await websocket.send_json({"type": "stderr", "data": f"Internal Error: {str(e)}\n"})
+        await websocket.send_json({"type": "exit", "code": 1})
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass

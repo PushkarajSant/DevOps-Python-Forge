@@ -1,12 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from datetime import datetime
 
 from database import get_db
 from models import Exercise, Submission, UserProgress, TestCase, Level, User
 from schemas import SubmissionCreate, SubmissionResponse
-from security import get_current_user
-from execution.runner import run_code, validate_output
+from security import get_current_user, get_current_user_ws
+from execution.runner import run_code, validate_output, run_code_interactive_async
 
 router = APIRouter()
 
@@ -178,3 +178,40 @@ def _build_failure_feedback(code: str, test_results: list) -> str:
         feedback_parts.append(f"💡 {failed_visible[0]['feedback']}")
 
     return "\n".join(feedback_parts) or "Check your output format and logic carefully."
+
+
+@router.websocket("/{exercise_id}/run_interactive")
+async def run_exercise_interactive(
+    websocket: WebSocket,
+    exercise_id: int,
+    db: Session = Depends(get_db),
+):
+    await websocket.accept()
+    current_user = await get_current_user_ws(websocket, db)
+    if not current_user:
+        return
+        
+    ex = db.query(Exercise).filter(Exercise.id == exercise_id).first()
+    if not ex:
+        await websocket.send_json({"type": "stderr", "data": "Exercise not found\n"})
+        await websocket.close()
+        return
+
+    # Wait for the first message containing the code
+    try:
+        data = await websocket.receive_text()
+        import json
+        payload = json.loads(data)
+        code = payload.get("code", "")
+    except Exception:
+        await websocket.send_json({"type": "stderr", "data": "Invalid payload\n"})
+        await websocket.close()
+        return
+
+    await run_code_interactive_async(
+        code=code,
+        allowed_imports=ex.allowed_imports or [],
+        websocket=websocket,
+        timeout_secs=ex.timeout_secs or 5,
+    )
+

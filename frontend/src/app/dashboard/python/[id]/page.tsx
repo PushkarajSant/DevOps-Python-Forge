@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useAuth } from '@/context/AuthContext'
@@ -22,7 +22,18 @@ export default function ExercisePage() {
     const [running, setRunning] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [activeTab, setActiveTab] = useState<'problem' | 'hints' | 'concepts' | 'ai'>('problem')
-    const [customInput, setCustomInput] = useState('')
+
+    // Interactive Terminal State
+    const [terminalOutput, setTerminalOutput] = useState<{ type: 'stdout' | 'stderr', text: string }[]>([])
+    const wsRef = useRef<WebSocket | null>(null)
+    const terminalEndRef = useRef<HTMLDivElement | null>(null)
+
+    // Scroll to bottom of terminal
+    useEffect(() => {
+        if (terminalEndRef.current) {
+            terminalEndRef.current.scrollIntoView({ behavior: 'smooth' })
+        }
+    }, [terminalOutput])
 
     // AI State
     const [aiLoading, setAiLoading] = useState(false)
@@ -39,19 +50,56 @@ export default function ExercisePage() {
         }
     }, [user, id])
 
-    const handleRun = useCallback(async () => {
+    const handleRunInteractive = useCallback(() => {
         if (!exercise) return
         setRunning(true)
-        setRan(false)
+        setRan(true)
         setResult(null)
-        try {
-            const r = await submissionsApi.run(exercise.id, code, customInput)
-            setOutput(r.data)
-            setRan(true)
-        } catch {
-            toast.error('Run failed')
-        } finally { setRunning(false) }
-    }, [exercise, code, customInput])
+        setTerminalOutput([])
+
+        const token = localStorage.getItem('forge_token')
+        const wsBaseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace('http', 'ws')
+        const ws = new WebSocket(`${wsBaseUrl}/api/submissions/${exercise.id}/run_interactive?token=${token}`)
+        wsRef.current = ws
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({ code }))
+        }
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data)
+                if (data.type === 'exit') {
+                    setRunning(false)
+                    ws.close()
+                } else {
+                    setTerminalOutput(prev => [...prev, { type: data.type, text: data.data }])
+                }
+            } catch (e) {
+                console.error('WS parse error', e)
+            }
+        }
+
+        ws.onclose = () => {
+            setRunning(false)
+        }
+
+        ws.onerror = () => {
+            setTerminalOutput(prev => [...prev, { type: 'stderr', text: '\nWebSocket connection error.' }])
+            setRunning(false)
+        }
+    }, [exercise, code])
+
+    const handleTerminalInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            const val = e.currentTarget.value
+            setTerminalOutput(prev => [...prev, { type: 'stdout', text: val + '\n' }]) // local echo
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(val + '\n')
+            }
+            e.currentTarget.value = ''
+        }
+    }
 
     const handleSubmit = useCallback(async () => {
         if (!exercise) return
@@ -75,12 +123,12 @@ export default function ExercisePage() {
     // Ctrl+Enter to run
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
-            if (e.ctrlKey && e.key === 'Enter') handleRun()
+            if (e.ctrlKey && e.key === 'Enter') handleRunInteractive()
             if (e.ctrlKey && e.shiftKey && e.key === 'Enter') handleSubmit()
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleRun, handleSubmit])
+    }, [handleRunInteractive, handleSubmit])
 
     const handleAskAIMentor = async () => {
         if (!exercise) return
@@ -295,21 +343,9 @@ export default function ExercisePage() {
                         />
                     </div>
 
-                    {/* Custom input */}
-                    <div className="border-t border-[#1f2937] bg-[#111827] px-4 py-2 flex items-center gap-3 shrink-0">
-                        <span className="text-xs text-gray-500">Custom input (optional):</span>
-                        <textarea
-                            className="flex-1 bg-[#0a0e1a] border border-[#1f2937] rounded px-2 py-1 text-xs font-mono resize-none focus:border-[#00FF88] outline-none"
-                            rows={1}
-                            placeholder="stdin..."
-                            value={customInput}
-                            onChange={e => setCustomInput(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Action bar */}
+                    {/* Action bar and Terminal */}
                     <div className="border-t border-[#1f2937] bg-[#111827] px-4 py-3 flex items-center gap-3 shrink-0">
-                        <button onClick={handleRun} disabled={running}
+                        <button onClick={handleRunInteractive} disabled={running}
                             className="px-5 py-2 bg-[#1f2937] hover:bg-[#374151] text-white text-sm rounded-lg transition disabled:opacity-50 flex items-center gap-2">
                             {running ? <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : '▶'}
                             Run <kbd className="text-xs text-gray-500 ml-1">Ctrl+Enter</kbd>
@@ -339,13 +375,30 @@ export default function ExercisePage() {
                     {/* Output Panel */}
                     {(ran || result) && (
                         <div className="border-t border-[#1f2937] bg-[#0a0e1a] h-48 overflow-y-auto p-4 shrink-0">
-                            {/* Run output */}
-                            {ran && !result && output && (
-                                <div>
-                                    <div className="text-xs text-gray-500 mb-1">Run output ({output.execution_time_ms}ms):</div>
-                                    <div className={`terminal text-xs ${output.error ? 'terminal-error' : 'terminal-success'}`}>
-                                        {output.error || output.stdout || '(no output)'}
+                            {/* Run output (Terminal) */}
+                            {ran && !result && (
+                                <div className="flex flex-col h-full font-mono text-xs">
+                                    <div className="flex-1 overflow-y-auto">
+                                        {terminalOutput.length === 0 && <div className="text-gray-500 italic">Waiting for output...</div>}
+                                        {terminalOutput.map((msg, idx) => (
+                                            <span key={idx} className={msg.type === 'stderr' ? 'text-red-400' : 'text-gray-300'} style={{ whiteSpace: 'pre-wrap' }}>
+                                                {msg.text}
+                                            </span>
+                                        ))}
+                                        <div ref={terminalEndRef} />
                                     </div>
+                                    {running && (
+                                        <div className="mt-2 flex items-center gap-2 border-t border-[#1f2937] pt-2">
+                                            <span className="text-[#00FF88]">❯</span>
+                                            <input
+                                                type="text"
+                                                className="flex-1 bg-transparent border-none outline-none text-gray-300"
+                                                placeholder="Type input and hit Enter..."
+                                                onKeyDown={handleTerminalInput}
+                                                autoFocus
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
