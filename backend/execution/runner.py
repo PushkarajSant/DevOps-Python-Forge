@@ -120,23 +120,26 @@ def run_code_safely(
     except Exception:
         pass  # If AST manipulation fails, fall back to executing original code
 
-    # Step 3: Write code to temp file
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
-        f.write(code)
-        tmp_path = f.name
+    # Step 3: Encode code to base64 to avoid file mounting (Docker-in-Docker fix)
+    import base64
+    encoded_code = base64.b64encode(code.encode("utf-8")).decode("utf-8")
+    
+    env = os.environ.copy()
+    env["CODE_B64"] = encoded_code
 
     try:
         start = time.perf_counter()
         
-        abs_tmp_path = os.path.abspath(tmp_path)
         docker_cmd = [
             "docker", "run", "--rm", "-i",
             "--network=none",
             "--cpus=0.5",
             "--memory=128m",
-            "-v", f"{abs_tmp_path}:/app/script.py:ro",
+            "-e", "CODE_B64",
+            "-e", "PYTHONUNBUFFERED=1",
             "python:3.11-slim",
-            "python", "-u", "/app/script.py"
+            "python", "-c", 
+            "import os,base64;exec(compile(base64.b64decode(os.environ['CODE_B64']), '/app/script.py', 'exec'))"
         ]
         
         result = subprocess.run(
@@ -144,7 +147,7 @@ def run_code_safely(
             input=input_data.encode("utf-8") if input_data else b"",
             capture_output=True,
             timeout=timeout_secs,
-            env=os.environ.copy()
+            env=env
         )
         elapsed = (time.perf_counter() - start) * 1000
 
@@ -174,11 +177,6 @@ def run_code_safely(
             "error": str(e),
             "timed_out": False,
         }
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except Exception:
-            pass
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -271,31 +269,25 @@ async def run_code_interactive_async(
         await websocket.send_json({"type": "exit", "code": 1})
         return
 
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
-        f.write(code)
-        tmp_path = f.name
+    import base64
+    encoded_code = base64.b64encode(code.encode("utf-8")).decode("utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = ""
     env["PYTHONUNBUFFERED"] = "1"
+    env["CODE_B64"] = encoded_code
 
     try:
-        # Resolve absolute path for Docker volume mounting. Windows needs special handling for Docker paths sometimes,
-        # but standard absolute paths usually work in modern Docker Desktop.
-        abs_tmp_path = os.path.abspath(tmp_path)
-        
-        # Convert Windows path to Docker-compatible format if necessary (C:\ -> /c/)
-        # Using standard C:\path format is usually supported by Docker Desktop on Windows natively now.
-        
-        # We need -i to keep stdin open, but NOT -t (TTY), as TTY messes up raw stdout parsing
         docker_cmd = [
             "docker", "run", "--rm", "-i",
             "--network=none",
             "--cpus=0.5",
             "--memory=128m",
-            "-v", f"{abs_tmp_path}:/app/script.py:ro",
+            "-e", "CODE_B64",
+            "-e", "PYTHONUNBUFFERED=1",
             "python:3.11-slim",
-            "python", "-u", "/app/script.py" # -u forces unbuffered output
+            "python", "-c", 
+            "import os,base64;exec(compile(base64.b64decode(os.environ['CODE_B64']), '/app/script.py', 'exec'))"
         ]
 
         process = subprocess.Popen(
@@ -380,10 +372,5 @@ async def run_code_interactive_async(
         try:
             await websocket.send_json({"type": "stderr", "data": f"Internal Error: {err_msg}\n"})
             await websocket.send_json({"type": "exit", "code": 1})
-        except Exception:
-            pass
-    finally:
-        try:
-            os.unlink(tmp_path)
         except Exception:
             pass

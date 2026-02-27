@@ -2,9 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (Docker CLI needed for sandbox execution)
 RUN apt-get update && apt-get install -y \
     curl \
+    docker.io \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

@@ -17,6 +17,8 @@ services:
     volumes:
       - ./backend:/app
       - forge-data:/app/data
+      # Mount host Docker socket to enable Docker-in-Docker sandboxing
+      - /var/run/docker.sock:/var/run/docker.sock
     command: >
       sh -c "
         python seed/seed_db.py &&
