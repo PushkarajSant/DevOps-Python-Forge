@@ -43,6 +43,7 @@ export default function ExercisePage() {
         if (!exercise) return
         setRunning(true)
         setRan(false)
+        setResult(null)
         try {
             const r = await submissionsApi.run(exercise.id, code, customInput)
             setOutput(r.data)
@@ -63,6 +64,9 @@ export default function ExercisePage() {
             } else {
                 toast.error('Some tests failed. Check the results below.')
             }
+            // Re-fetch exercise to update dynamically unlocked hints, concepts, and attempt count
+            const updatedEx = await exercisesApi.getById(exercise.id)
+            setExercise(updatedEx.data)
         } catch {
             toast.error('Submission failed')
         } finally { setSubmitting(false) }
