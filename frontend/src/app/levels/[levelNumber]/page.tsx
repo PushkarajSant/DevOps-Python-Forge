@@ -49,25 +49,32 @@ export default function LevelPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {exercises.map((ex, i) => (
                         <Link key={ex.id} href={`/dashboard/python/${ex.id}`}
-                            className={`block bg-[#1f2937] p-4 rounded-lg border border-[#374151] hover:border-[#00FF88] transition cursor-pointer group ${ex.is_completed ? 'border-[#00FF88]/30 bg-[#00FF88]/5' : 'border-[#1f2937] bg-[#111827] hover:border-[#00FF88]/30'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-mono font-bold ${ex.is_completed ? 'bg-[#00FF88] text-black' : 'bg-[#1f2937] text-gray-400'}`}>
-                                {ex.is_completed ? '✓' : i + 1}
+                            className={`flex flex-col h-full p-5 rounded-lg border transition cursor-pointer group ${ex.is_completed ? 'border-[#00FF88]/30 bg-[#00FF88]/5' : 'border-[#1f2937] bg-[#111827] hover:border-[#00FF88]/40'}`}>
+
+                            <div className="flex items-start justify-between mb-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-mono font-bold ${ex.is_completed ? 'bg-[#00FF88] text-black shadow-[0_0_10px_rgba(0,255,136,0.3)]' : 'bg-[#1f2937] text-gray-400'}`}>
+                                    {ex.is_completed ? '✓' : i + 1}
+                                </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="font-medium group-hover:text-[#00FF88] transition truncate">{ex.title}</div>
-                                <div className="flex items-center gap-2 mt-1">
+
+                            <div className="flex-1 min-w-0 mb-4">
+                                <div className="font-semibold text-base group-hover:text-[#00FF88] transition truncate">{ex.title}</div>
+                                <div className="flex flex-wrap items-center gap-2 mt-3">
                                     <span className={
                                         ex.difficulty === 'easy' ? 'badge-easy' :
                                             ex.difficulty === 'medium' ? 'badge-medium' : 'badge-hard'
                                     }>{ex.difficulty}</span>
                                     {ex.tags?.map((t: string) => (
-                                        <span key={t} className="text-xs text-gray-500 bg-[#1f2937] px-2 py-0.5 rounded-full">{t}</span>
+                                        <span key={t} className="text-xs font-mono text-gray-400 bg-[#1f2937] border border-[#374151] px-2 py-0.5 rounded-md">{t}</span>
                                     ))}
                                 </div>
                             </div>
-                            <div className="text-right shrink-0">
-                                <div className="text-[#00FF88] text-sm font-semibold">+{ex.xp_reward} XP</div>
-                                {ex.attempts > 0 && <div className="text-xs text-gray-500">{ex.attempts} attempts</div>}
+
+                            <div className="mt-auto pt-4 border-t border-[#1f2937]/50 flex justify-end items-end">
+                                <div className="text-right">
+                                    <div className="text-[#00FF88] text-sm font-bold">+{ex.xp_reward} XP</div>
+                                    {ex.attempts > 0 && <div className="text-xs text-gray-500 mt-1">{ex.attempts} attempts</div>}
+                                </div>
                             </div>
                         </Link>
                     ))}

@@ -15,10 +15,24 @@ Master Python from "Hello World" to building advanced DevOps CLI tools and async
 
 ---
 
-## ✨ Interface & Features
+## ✨ Platform Features
 
 <details open>
-<summary><b>🤖 Local AI Code Mentor (Powered by Ollama)</b></summary>
+<summary><b>🐳 Instant Docker Execution Sandbox</b></summary>
+<br />
+No more fake emulators. Every time you run or submit code, it executes instantly inside a secure, resource-limited Python 3.11 Docker container. This guarantees 100% accurate standard library behavior, allowing you to safely test file I/O, subprocesses, and OS-level operations without risks to the host.
+<br />
+</details>
+
+<details open>
+<summary><b>💻 Interactive WebSocket Terminal</b></summary>
+<br />
+Experience a true REPL environment. The in-browser terminal connects to the background Docker container via lightning-fast WebSockets, allowing you to type inputs in real-time, handle asynchronous streams, and debug interactively.
+<br />
+</details>
+
+<details>
+<summary><b>🤖 Local AI Code Mentor (Ollama)</b></summary>
 <br />
 Get contextual help when you're stuck, or request a senior code review. Uses a completely private, local <strong>Qwen 2.5 Coder 1.5b</strong> model—your code never leaves the sandbox!
 <br /><br />
@@ -49,11 +63,10 @@ Dedicated JWT authentication with a secure registration flow. Track your progres
 
 ### Platform Capabilities
 - 🎯 **193 Progressive Exercises**: Spanning 11 levels (Basics to Capstone DevOps Projects).
-- 🔒 **Sandboxed Execution**: AST-validated, timeout-protected Python runner isolated from host system.
+- 🔒 **Docker-Driven Sandbox**: Real Linux containers, real time execution. No mocked AST limits.
 - 💡 **Progressive Unlocks**: Hints and conceptual breakdowns automatically unlock after failed attempts to prevent spoilers.
 - 📊 **Progress Dashboard**: Per-level breakdowns, activity heatmaps, and platform statistics.
 - 🛡️ **Admin Panel**: Complete CRUD access over exercises, users, and hints.
-- 🐳 **Docker Ready**: Deploy the entire stack, including the AI Mentor, with a single `docker-compose up`.
 
 ---
 
@@ -62,9 +75,9 @@ Dedicated JWT authentication with a secure registration flow. Track your progres
 | Ecosystem | Technology | Description |
 |-----------|------------|-------------|
 | **Frontend** | Next.js 14, React, Tailwind CSS | High-performance React framework with utility-first styling. |
-| **Backend** | Python 3.11+, FastAPI | Asynchronous API server with auto-generated OpenAPI docs. |
+| **Backend** | Python 3.11+, FastAPI, WebSockets | Asynchronous API server with real-time bidirectional streaming. |
 | **Database** | SQLite + SQLAlchemy | Lightweight relational database with powerful ORM. |
-| **Execution** | Built-in Subprocess Sandbox | Secure Python AST-based execution environment. |
+| **Execution** | Docker Daemon Integration | Ephemeral, resource-constrained containerized execution. |
 | **AI Subsystem** | Ollama | Local LLM inference engine running `qwen2.5-coder:1.5b`. |
 
 ---
@@ -128,12 +141,15 @@ Navigate to **http://localhost:3000**.
 
 ---
 
-## 🛡️ Sandbox Security
-The execution engine is designed specifically for online education:
-- **AST Scanning**: Aggressively blocks potentially dangerous functions (`os.system`, `subprocess`, `socket`, `eval`, `exec`).
-- **Import Whitelisting**: Exercises explicitly declare accessible modules.
-- **Timeout Protection**: Strict 5-second kill switch to prevent infinite loops.
-- **Output Capping**: Limits stdout returns to `10KB` to prevent memory blowouts.
+---
+
+## 🛡️ Sandbox Security Architecture
+The platform utilizes a state-of-the-art containerized security model, moving beyond basic AST parsing to provide true OS-level isolation:
+- **Ephemeral Docker Containers**: Every code execution spins up a fresh, zero-state `python:3.11-slim` container using the `--rm` flag, ensuring no malware can persist.
+- **Strict Resource Quotas**: Containers are rigidly constrained with `--cpus="0.5"` and `--memory="128m"` to prevent Fork Bombs and Cryptojacking.
+- **Total Network Isolation**: Containers run with `--network=none`, completely disabling internet access and preventing data exfiltration or botnet recruitment.
+- **Read-Only Mounting**: User scripts are mounted as read-only volumes, preventing modifications to the host execution environment.
+- **Interactive Timeouts**: Background WebSocket sessions are capped at 5 minutes, while automated test grading is forcefully killed after 3 seconds.
 
 ---
 

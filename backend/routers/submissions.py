@@ -208,10 +208,11 @@ async def run_exercise_interactive(
         await websocket.close()
         return
 
+    # For interactive sessions, give the user 5 minutes to play around before killing the sandbox
     await run_code_interactive_async(
         code=code,
         allowed_imports=ex.allowed_imports or [],
         websocket=websocket,
-        timeout_secs=ex.timeout_secs or 5,
+        timeout_secs=300, 
     )
 

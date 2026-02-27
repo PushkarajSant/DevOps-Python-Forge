@@ -36,7 +36,7 @@ LEVELS = [
         "title": "Core Fundamentals",
         "description": "Variables, data types, type casting, operators, and string formatting in DevOps contexts.",
         "color": "#22c55e",
-        "unlock_xp_required": 80,
+        "unlock_xp_required": 40,
         "min_exercises_to_pass": 15,
         "exercises": LEVEL_1_EXERCISES,
     },

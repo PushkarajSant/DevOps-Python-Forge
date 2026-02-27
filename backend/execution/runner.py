@@ -6,6 +6,7 @@ import time
 import tempfile
 import subprocess
 import traceback
+import threading
 from typing import List, Tuple, Optional
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
@@ -101,7 +102,25 @@ def run_code_safely(
             "timed_out": False,
         }
 
-    # Step 2: Write code to temp file
+    # Step 2: Strip input() prompts automatically for the grader
+    try:
+        tree = ast.parse(code)
+        
+        class RemoveInputPrompts(ast.NodeTransformer):
+            def visit_Call(self, node):
+                self.generic_visit(node)
+                if isinstance(node.func, ast.Name) and node.func.id == 'input':
+                    node.args = []
+                    node.keywords = []
+                return node
+        
+        tree = RemoveInputPrompts().visit(tree)
+        ast.fix_missing_locations(tree)
+        code = ast.unparse(tree)
+    except Exception:
+        pass  # If AST manipulation fails, fall back to executing original code
+
+    # Step 3: Write code to temp file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as f:
         f.write(code)
         tmp_path = f.name
@@ -122,16 +141,15 @@ def run_code_safely(
         
         result = subprocess.run(
             docker_cmd,
-            input=input_data,
+            input=input_data.encode("utf-8") if input_data else b"",
             capture_output=True,
-            text=True,
             timeout=timeout_secs,
             env=os.environ.copy()
         )
         elapsed = (time.perf_counter() - start) * 1000
 
-        stdout = result.stdout[:max_output_bytes]
-        stderr = result.stderr[:2048]
+        stdout = result.stdout.decode("utf-8", errors="replace")[:max_output_bytes]
+        stderr = result.stderr.decode("utf-8", errors="replace")[:2048]
 
         return {
             "stdout": stdout,
@@ -280,62 +298,82 @@ async def run_code_interactive_async(
             "python", "-u", "/app/script.py" # -u forces unbuffered output
         ]
 
-        process = await asyncio.create_subprocess_exec(
-            *docker_cmd,
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
+        process = subprocess.Popen(
+            docker_cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             env=env
         )
 
-        async def read_stream(stream, ws: WebSocket, is_error: bool):
+        loop = asyncio.get_running_loop()
+
+        def stream_reader(stream, is_error: bool):
             try:
                 while True:
-                    # Read byte by byte or block by block. 1 byte ensures zero latency.
-                    # 1024 bytes with await stream.read is also relatively low latency.
-                    chunk = await stream.read(1024)
+                    # Use read1 to read whatever bytes are available up to 1024,
+                    # without blocking to wait for the full 1024 bytes to arrive!
+                    # This ensures small prompts like 'a: ' instantly flush to UI.
+                    chunk = stream.read1(1024) if hasattr(stream, 'read1') else stream.read(1024)
                     if not chunk:
                         break
                     text = chunk.decode("utf-8", errors="replace")
                     msg_type = "stderr" if is_error else "stdout"
-                    await ws.send_json({"type": msg_type, "data": text})
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": msg_type, "data": text}), loop
+                    )
             except Exception:
                 pass
 
-        async def write_stream(stream, ws: WebSocket):
+        # Start background threads to read stdout/stderr from subprocess
+        threading.Thread(target=stream_reader, args=(process.stdout, False), daemon=True).start()
+        threading.Thread(target=stream_reader, args=(process.stderr, True), daemon=True).start()
+
+        async def write_loop():
             try:
                 while True:
-                    data = await ws.receive_text()
-                    if data:
-                        stream.write(data.encode('utf-8'))
-                        await stream.drain()
+                    data = await websocket.receive_text()
+                    if data and process.poll() is None:
+                        process.stdin.write(data.encode('utf-8'))
+                        process.stdin.flush()
             except WebSocketDisconnect:
                 pass
             except Exception:
                 pass
 
+        async def wait_process():
+            while process.poll() is None:
+                await asyncio.sleep(0.1)
+            return process.returncode
+
         async def timeout_task():
             await asyncio.sleep(timeout_secs)
-            try:
+            if process.poll() is None:
                 process.kill()
-                await websocket.send_json({"type": "stderr", "data": f"\n\n[Process killed after {timeout_secs}s timeout]"})
-            except ProcessLookupError:
-                pass
+                try:
+                    await websocket.send_json({"type": "stderr", "data": f"\n\n[Process killed after {timeout_secs}s timeout]"})
+                except Exception:
+                    pass
 
-        task_stdout = asyncio.create_task(read_stream(process.stdout, websocket, False))
-        task_stderr = asyncio.create_task(read_stream(process.stderr, websocket, True))
-        task_stdin = asyncio.create_task(write_stream(process.stdin, websocket))
-        timeout_coro = asyncio.create_task(timeout_task())
+        task_write = asyncio.create_task(write_loop())
+        task_timeout = asyncio.create_task(timeout_task())
+        task_wait = asyncio.create_task(wait_process())
 
-        await process.wait()
+        # Wait until the process exits OR the websocket disconnects (write_loop ends)
+        await asyncio.wait([task_wait, task_write], return_when=asyncio.FIRST_COMPLETED)
+
+        if process.poll() is None:
+            process.kill()
 
         # Clean up tasks
-        timeout_coro.cancel()
-        task_stdout.cancel()
-        task_stderr.cancel()
-        task_stdin.cancel()
+        task_timeout.cancel()
+        task_write.cancel()
+        task_wait.cancel()
         
-        await websocket.send_json({"type": "exit", "code": process.returncode})
+        try:
+            await websocket.send_json({"type": "exit", "code": process.returncode or 0})
+        except Exception:
+            pass
 
     except Exception as e:
         err_msg = traceback.format_exc()
