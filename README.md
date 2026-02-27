@@ -1,170 +1,142 @@
-# DevOps Python Forge ⚙️🐍
+<div align="center">
+  <h1>⚙️🐍 DevOps Python Forge</h1>
+  <p>A production-grade, exercise-driven Python learning platform for DevOps engineers.</p>
+  
+  [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+  [![Next.js 14](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+  [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-00a393.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
+  [![Ollama](https://img.shields.io/badge/AI-Ollama--Qwen2.5-orange.svg)](https://ollama.ai/)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+</div>
 
-A production-grade, exercise-driven Python learning platform for DevOps engineers. Master Python through **193 hands-on exercises** across 11 levels — from "Hello World" to building CLI tools and async scripts.
+<br />
 
-## Features
+Master Python from "Hello World" to building advanced DevOps CLI tools and asynchronous scripts through **193 hands-on, sandboxed exercises** spanning 11 progressive levels.
 
-### Platform UI
-![DevOps Python Forge Landing Page](docs/landing.png)
-*The brand new marketing landing page featuring dynamic track routing.*
+---
 
-![DevOps Python Forge Authentication](docs/login.png)
-*Dedicated JWT authentication and registration page.*
+## ✨ Interface & Features
 
-![AI Code Mentor](docs/qwen_ai_mentor_ui.png)
-*Self-hosted Qwen 2.5 Coder AI Assistant integrated directly into the Monaco Editor.*
+<details open>
+<summary><b>🤖 Local AI Code Mentor (Powered by Ollama)</b></summary>
+<br />
+Get contextual help when you're stuck, or request a senior code review. Uses a completely private, local <strong>Qwen 2.5 Coder 1.5b</strong> model—your code never leaves the sandbox!
+<br /><br />
+<div align="center">
+  <img src="docs/qwen_ai_mentor_ui.png" alt="AI Code Mentor" width="800" />
+</div>
+</details>
 
-- 🎯 **193 Exercises** across 11 progressive levels
-- 🤖 **Local AI Mentor** — Get help when you're stuck or request senior code reviews via local Ollama integration (Qwen 2.5 Coder 1.5b)
-- 🖥️ **Monaco Editor IDE** — VS Code-like coding experience in the browser
-- 🔒 **Sandboxed Execution** — AST-validated, timeout-protected Python runner
-- 🏆 **Gamification** — XP, streaks, levels, leaderboard, and 16 achievement badges
-- 💡 **Progressive Hints** — unlock after failed attempts (no solution spoilers)
-- 📊 **Progress Dashboard** — per-level breakdown, activity heatmap, stats
-- 🛡️ **Admin Panel** — exercise CRUD, user management, platform stats
-- 🔐 **JWT Authentication** — secure user sessions
-- 🐳 **Docker Ready** — single `docker-compose up` deployment
+<details>
+<summary><b>🖥️ Next-Gen Browser IDE</b></summary>
+<br />
+Write code in a fully featured <b>Monaco Editor</b> (the engine behind VS Code) embedded directly in the browser, featuring syntax highlighting, auto-formatting, and custom shortcuts.
+<br /><br />
+<div align="center">
+  <img src="docs/landing.png" alt="Landing Page" width="800" />
+</div>
+</details>
 
-## Tech Stack
+<details>
+<summary><b>🔐 Secure Authentication & Gamification</b></summary>
+<br />
+Dedicated JWT authentication with a secure registration flow. Track your progress, earn XP, unlock hints, and compete on the global leaderboard.
+<br /><br />
+<div align="center">
+  <img src="docs/login.png" alt="Authentication" width="800" />
+</div>
+</details>
 
-| Layer | Tech |
-|-------|------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, Monaco Editor |
-| Backend | FastAPI, Python 3.11+ |
-| Database | SQLite + SQLAlchemy ORM |
-| Auth | JWT (python-jose + passlib/bcrypt) |
-| Execution | subprocess + AST validation sandbox |
+### Platform Capabilities
+- 🎯 **193 Progressive Exercises**: Spanning 11 levels (Basics to Capstone DevOps Projects).
+- 🔒 **Sandboxed Execution**: AST-validated, timeout-protected Python runner isolated from host system.
+- 💡 **Progressive Unlocks**: Hints and conceptual breakdowns automatically unlock after failed attempts to prevent spoilers.
+- 📊 **Progress Dashboard**: Per-level breakdowns, activity heatmaps, and platform statistics.
+- 🛡️ **Admin Panel**: Complete CRUD access over exercises, users, and hints.
+- 🐳 **Docker Ready**: Deploy the entire stack, including the AI Mentor, with a single `docker-compose up`.
 
-## Quick Start
+---
 
-### Prerequisites
+## 🏗️ Technology Stack
 
-- Python 3.10+
-- Node.js 18+
-- npm / yarn
+| Ecosystem | Technology | Description |
+|-----------|------------|-------------|
+| **Frontend** | Next.js 14, React, Tailwind CSS | High-performance React framework with utility-first styling. |
+| **Backend** | Python 3.11+, FastAPI | Asynchronous API server with auto-generated OpenAPI docs. |
+| **Database** | SQLite + SQLAlchemy | Lightweight relational database with powerful ORM. |
+| **Execution** | Built-in Subprocess Sandbox | Secure Python AST-based execution environment. |
+| **AI Subsystem** | Ollama | Local LLM inference engine running `qwen2.5-coder:1.5b`. |
 
-### Backend Setup
+---
 
-```powershell
-cd backend
-python -m venv venv
-.\venv\Scripts\activate        # Windows
-# source venv/bin/activate     # Mac/Linux
+## 🚀 Quick Start
 
-# The application uses SQLite by default, which is already set up and ready to go.
-
-pip install -r requirements.txt
-
-# This script creates all required database tables/schemas and seeds the initial exercises
-python seed/seed_db.py
-
-uvicorn main:app --reload --port 8000
-```
-
-### Frontend Setup
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-Then open **http://localhost:3000** in your browser.
-
-### Docker (Alternative)
-
+### Option A: Docker (Recommended)
+Launch the entire platform (Frontend, Backend, Database, and Ollama AI) automatically.
 ```bash
 docker-compose up --build
 ```
 
-## Production Deployment
+### Option B: Local Setup
 
-If you are looking to deploy DevOps Python Forge securely to a public domain via AWS or GCP, please refer to the detailed [Production Deployment Guide](PRODUCTION_DEPLOYMENT.md).
+#### 1. Backend API
+```bash
+cd backend
+python -m venv venv
 
-## Project Structure
+# Windows
+.\venv\Scripts\activate
+# Mac/Linux
+# source venv/bin/activate
 
-```
-devops-python-forge/
-├── backend/
-│   ├── main.py                  # FastAPI entry
-│   ├── models.py                # SQLAlchemy ORM models
-│   ├── schemas.py               # Pydantic request/response schemas
-│   ├── security.py              # JWT + password hashing
-│   ├── database.py              # DB setup
-│   ├── routers/                 # API route modules
-│   │   ├── auth.py              # Register, login, me
-│   │   ├── levels.py            # Level listing + exercises
-│   │   ├── exercises.py         # Exercise detail
-│   │   ├── submissions.py       # Run + submit code
-│   │   ├── progress.py          # Dashboard + stats
-│   │   ├── achievements.py      # Badge system
-│   │   ├── admin.py             # Admin CRUD
-│   │   └── users.py             # Leaderboard
-│   ├── execution/               # Code execution engine
-│   │   ├── runner.py            # Sandboxed subprocess runner
-│   │   ├── comparator.py        # Output comparison (5 modes)
-│   │   └── feedback.py          # Failure analysis engine
-│   └── seed/                    # Database seeding
-│       ├── seed_db.py           # Seed runner script
-│       └── exercises/           # Level 0–10 exercise data
-├── frontend/
-│   └── src/
-│       ├── app/                 # Next.js pages
-│       │   ├── page.tsx         # Login/Register
-│       │   ├── dashboard/       # Dashboard + level grid
-│       │   ├── levels/          # Exercise list per level
-│       │   ├── exercise/        # Monaco IDE + run/submit
-│       │   ├── progress/        # Stats + heatmap
-│       │   ├── leaderboard/     # XP ranking
-│       │   ├── achievements/    # Badges
-│       │   └── admin/           # Admin panel
-│       ├── context/             # AuthContext
-│       └── lib/                 # API client
-└── docker-compose.yml           # Multi-container setup
+pip install -r requirements.txt
+
+# Seed the database with all 193 exercises
+python seed/seed_db.py
+
+# Start the server
+uvicorn main:app --reload --port 8000
 ```
 
-## API Endpoints
+#### 2. Frontend App
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Navigate to **http://localhost:3000**.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/auth/register` | POST | Create account |
-| `/api/auth/login` | POST | Get JWT token |
-| `/api/auth/me` | GET | Current user info |
-| `/api/levels` | GET | All levels + progress |
-| `/api/levels/{n}/exercises` | GET | Exercises for level |
-| `/api/exercises/{id}` | GET | Exercise detail with hints |
-| `/api/submissions/{id}/run` | POST | Run code (sandbox) |
-| `/api/submissions/{id}/submit` | POST | Submit solution |
-| `/api/progress/dashboard` | GET | User stats |
-| `/api/achievements` | GET | User badges |
-| `/api/users/leaderboard` | GET | XP ranking |
-| `/api/admin/*` | Various | Admin operations |
+*(Note: To use the AI Mentor locally without Docker, you must install [Ollama](https://ollama.com/) on your host machine and run `ollama pull qwen2.5-coder:1.5b` and ensure the Ollama API is running on localhost:11434).*
 
-## Exercise Levels
+---
 
-| Level | Topic | Exercises |
-|-------|-------|-----------|
-| 0 | Python Execution Basics | 10 |
-| 1 | Core Fundamentals | 20 |
-| 2 | Control Flow Mastery | 20 |
-| 3 | Data Structures | 25 |
-| 4 | Functions & Modularity | 20 |
-| 5 | File Handling & I/O | 25 |
-| 6 | Error Handling | 15 |
-| 7 | API & Networking | 20 |
-| 8 | CLI Tools | 20 |
-| 9 | Concurrency & Async | 15 |
-| 10 | Capstone Projects | 5 |
+## 📚 Exercise Modules
 
-## Security
+| Level | Module Topic | Count | Focus |
+|-------|--------------|-------|-------|
+| **0** | **Execution Basics** | 10 | Printing, variable assignment, basic math |
+| **1** | **Core Fundamentals** | 20 | Types, strings, input/output |
+| **2** | **Control Flow Mastery** | 20 | If/else, loops, conditionals |
+| **3** | **Data Structures** | 25 | Lists, dictionaries, sets, tuples |
+| **4** | **Functions & Modularity** | 20 | Arguments, scope, recursion |
+| **5** | **File Handling & I/O** | 25 | Reading/writing logs, CSVs, JSON |
+| **6** | **Error Handling** | 15 | Exceptions, try/except blocks |
+| **7** | **API & Networking** | 20 | Requests, JSON parsing, REST |
+| **8** | **CLI Tools** | 20 | Argparse, sys.argv, subprocess |
+| **9** | **Concurrency & Async** | 15 | Asyncio, threading, multiprocess |
+| **10**| **DevOps Capstones** | 5 | Log analyzers, deployment scripts |
 
-The execution engine prevents malicious code via:
-- **AST scanning** — blocks `os.system`, `subprocess`, `socket`, `eval`, `exec`
-- **Per-exercise import whitelist**
-- **5-second timeout** with infinite loop detection
-- **Output size cap** (10KB)
-- **Isolated subprocess** — no file system or network access
+---
 
-## License
+## 🛡️ Sandbox Security
+The execution engine is designed specifically for online education:
+- **AST Scanning**: Aggressively blocks potentially dangerous functions (`os.system`, `subprocess`, `socket`, `eval`, `exec`).
+- **Import Whitelisting**: Exercises explicitly declare accessible modules.
+- **Timeout Protection**: Strict 5-second kill switch to prevent infinite loops.
+- **Output Capping**: Limits stdout returns to `10KB` to prevent memory blowouts.
 
-MIT
+---
+
+<div align="center">
+  📝 <strong>DevOps Python Forge</strong> is licensed under the <strong>MIT License</strong>.
+</div>
