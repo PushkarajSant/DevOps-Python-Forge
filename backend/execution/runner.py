@@ -5,14 +5,15 @@ import os
 import time
 import tempfile
 import subprocess
+import traceback
 from typing import List, Tuple, Optional
 import asyncio
 from fastapi import WebSocket, WebSocketDisconnect
 
 # Modules that are ALWAYS forbidden (security)
 ALWAYS_FORBIDDEN = {
-    "os", "sys", "subprocess", "socket", "shutil", "pathlib",
-    "importlib", "ctypes", "multiprocessing", "threading",
+    # System modules are now permitted as we are isolated in Docker!
+    "socket", "multiprocessing", "threading",
     "asyncio", "pty", "tty", "termios", "signal", "resource",
     "gc", "weakref", "inspect", "traceback", "linecache",
     "tokenize", "pickle", "shelve", "marshal",
@@ -107,17 +108,25 @@ def run_code_safely(
 
     try:
         start = time.perf_counter()
+        
+        abs_tmp_path = os.path.abspath(tmp_path)
+        docker_cmd = [
+            "docker", "run", "--rm", "-i",
+            "--network=none",
+            "--cpus=0.5",
+            "--memory=128m",
+            "-v", f"{abs_tmp_path}:/app/script.py:ro",
+            "python:3.11-slim",
+            "python", "-u", "/app/script.py"
+        ]
+        
         result = subprocess.run(
-            [sys.executable, tmp_path],
+            docker_cmd,
             input=input_data,
             capture_output=True,
             text=True,
             timeout=timeout_secs,
-            env={
-                # Minimal env: only Python path
-                "PATH": os.environ.get("PATH", ""),
-                "PYTHONPATH": "",
-            },
+            env=os.environ.copy()
         )
         elapsed = (time.perf_counter() - start) * 1000
 
@@ -248,17 +257,35 @@ async def run_code_interactive_async(
         f.write(code)
         tmp_path = f.name
 
+    env = os.environ.copy()
+    env["PYTHONPATH"] = ""
+    env["PYTHONUNBUFFERED"] = "1"
+
     try:
+        # Resolve absolute path for Docker volume mounting. Windows needs special handling for Docker paths sometimes,
+        # but standard absolute paths usually work in modern Docker Desktop.
+        abs_tmp_path = os.path.abspath(tmp_path)
+        
+        # Convert Windows path to Docker-compatible format if necessary (C:\ -> /c/)
+        # Using standard C:\path format is usually supported by Docker Desktop on Windows natively now.
+        
+        # We need -i to keep stdin open, but NOT -t (TTY), as TTY messes up raw stdout parsing
+        docker_cmd = [
+            "docker", "run", "--rm", "-i",
+            "--network=none",
+            "--cpus=0.5",
+            "--memory=128m",
+            "-v", f"{abs_tmp_path}:/app/script.py:ro",
+            "python:3.11-slim",
+            "python", "-u", "/app/script.py" # -u forces unbuffered output
+        ]
+
         process = await asyncio.create_subprocess_exec(
-            sys.executable, tmp_path,
+            *docker_cmd,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={
-                "PATH": os.environ.get("PATH", ""),
-                "PYTHONPATH": "",
-                "PYTHONUNBUFFERED": "1" # Important for real-time output
-            }
+            env=env
         )
 
         async def read_stream(stream, ws: WebSocket, is_error: bool):
@@ -311,8 +338,12 @@ async def run_code_interactive_async(
         await websocket.send_json({"type": "exit", "code": process.returncode})
 
     except Exception as e:
-        await websocket.send_json({"type": "stderr", "data": f"Internal Error: {str(e)}\n"})
-        await websocket.send_json({"type": "exit", "code": 1})
+        err_msg = traceback.format_exc()
+        try:
+            await websocket.send_json({"type": "stderr", "data": f"Internal Error: {err_msg}\n"})
+            await websocket.send_json({"type": "exit", "code": 1})
+        except Exception:
+            pass
     finally:
         try:
             os.unlink(tmp_path)
