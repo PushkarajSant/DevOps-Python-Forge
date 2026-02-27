@@ -11,7 +11,9 @@
 
 <br />
 
-Master Python from "Hello World" to building advanced DevOps CLI tools and asynchronous scripts through **193 hands-on, sandboxed exercises** spanning 11 progressive levels.
+**Vision:** Building a DevOps-focused, hands-on learning platform that starts with Python automation labs, and will later expand to Bash and Kubernetes labs. The goal is not generic coding practice, but **real-world DevOps problem-solving**—log parsing, infrastructure scripting, CI/CD tasks, YAML validation, and automation workflows—all inside a controlled sandbox environment.
+
+Currently featuring **193 hands-on, sandboxed Python exercises** spanning 11 progressive levels, from basic execution to advanced asynchronous programming.
 
 ---
 
